@@ -1,0 +1,290 @@
+import java.util.*;
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.*;
+import javafoundations.*;
+import java.applet.*;
+
+/* MoodPanel.java
+ * 
+ * Written by Charlotte Xiang and Lucky Bommireddy. Primarily implemented 
+ * by Lucky Bommireddy.
+ * 
+ * Creates the panel containing all features having to do with 
+ * selecting a mood and suggesting a song. This class implements both a 
+ * LinkedBinaryTree (in the form of a decision tree) as well as a LinkedList. 
+ * In this program, the user is prompted to answer a series of mood questions
+ * Their answers/choices are used to reference the corresponding Song object
+ * in the SongCollection LinkedBinaryTree. When they reach the end of the questioning,
+ * or when they choose to have a song returned to them, the program accesses the 
+ * song object the stopping point and retrieves the title of the song that 
+ * the program has determined they should listen to. The title is then stored 
+ * in a LinkedList so that it can be referenced if they should choose to add
+ * it to a playlist. The user can then run through the program again. 
+ * 
+ */
+
+public class MoodPanel extends JPanel {
+  
+  //instance variables:
+  private JLabel mood, photoLeft, photoRight, song;
+  private JButton left, right, now, restart, quit;
+  private JPanel question, photo, buttons, features; //to hold the jlabel mood
+  private ImageIcon leftImage, rightImage;
+  private SongCollection program;
+  private LinkedBinaryTree<Song> current;
+  private LinkedList<String> playlist; //a playlist that will store songs the user has listened to 
+  
+  
+  
+  //********************************************************************************
+  // Constructor: Sets Up the GUI
+  //********************************************************************************
+  public MoodPanel() {
+    
+    program = new SongCollection();
+    
+    current = program.getLib();
+    
+    playlist =  new LinkedList<String>(); 
+    
+    //---------------------------------------------------------------------------------
+    // creates the two buttons that we will use to question users
+    //---------------------------------------------------------------------------------
+    left = new JButton(current.getLeft().getRootElement().getMood()); //its left child
+    right = new JButton(current.getRight().getRootElement().getMood());//its right child
+    Color bluish = new Color(8, 102, 196);
+    left.setForeground(bluish);
+    right.setForeground(bluish);
+    
+    //---------------------------------------------------------------------------------
+    //let's create some button listeners!
+    //---------------------------------------------------------------------------------
+    ButtonListener listener = new ButtonListener ();
+    left.addActionListener(listener);
+    right.addActionListener(listener); 
+    
+    //---------------------------------------------------------------------------------
+    //colors and dimensions for overall MoodPanel:
+    //---------------------------------------------------------------------------------
+    Color eggshell = new Color(249, 241, 220); 
+    setBackground(eggshell);
+    setPreferredSize(new Dimension(500,400));   
+    
+    //---------------------------------------------------------------------------------
+    //sets the layout for all three panels:
+    //---------------------------------------------------------------------------------
+    setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+    
+    //---------------------------------------------------------------------------------
+    //question panel: 
+    //---------------------------------------------------------------------------------
+    question = new JPanel(); 
+    mood = new JLabel("What are you in the mood for?");
+    mood.setFont(mood.getFont().deriveFont(25f));
+    question.setBackground(eggshell);
+    question.setPreferredSize(new Dimension(500,100)); 
+    question.add(mood);
+    
+    //---------------------------------------------------------------------------------
+    //panel of photos:
+    //---------------------------------------------------------------------------------
+    photo = new JPanel();
+    photo.setBackground(eggshell);
+    photo.setPreferredSize(new Dimension(500,205));
+    leftImage = current.getLeft().getRootElement().getImage();
+    rightImage = current.getRight().getRootElement().getImage();
+    photoLeft = new JLabel ("", leftImage, JLabel.CENTER);
+    photoRight = new JLabel ("", rightImage, JLabel.CENTER);
+    photo.add(photoLeft, BorderLayout.WEST); 
+    photo.add(photoRight, BorderLayout.CENTER); 
+    
+    //---------------------------------------------------------------------------------
+    //panel with buttons: 
+    //---------------------------------------------------------------------------------
+    buttons = new JPanel();
+    buttons.setBackground(eggshell);
+    buttons.setPreferredSize(new Dimension(500, 50));
+    buttons.add(left);
+    buttons.add(right);
+    
+    //---------------------------------------------------------------------------------
+    //panel with extra features
+    //---------------------------------------------------------------------------------
+    features = new JPanel();
+    features.setBackground(eggshell);
+    features.setPreferredSize(new Dimension(500, 45));
+    now = new JButton("I can't wait, give me a song now!");
+    Color purple = new Color(150, 31, 149); 
+    now.setForeground(purple); //changes the color of the text on the button
+    now.setBackground(purple);
+    // add a listener for the now button
+    now.addActionListener(listener);
+    quit = new JButton("Quit");
+    quit.addActionListener(listener);
+    features.add(now);
+    features.add(quit);
+    restart = new JButton("I want another song suggestion!");
+    restart.addActionListener(listener);
+    
+    //---------------------------------------------------------------------------------
+    //add all the sub-panels to the overall panel
+    //---------------------------------------------------------------------------------
+    add(question);
+    add(photo);
+    add(buttons);
+    JSeparator line = new JSeparator(); //creates horizontal line
+    line.setForeground(purple); //sets its color
+    add(line); //adds a horizontal line
+    add(features);
+    
+    
+  }
+  
+  //********************************************************************************
+  // method that allows us to access the playlist:
+  //********************************************************************************
+  public LinkedList<String> getPlaylist (){
+    
+    return playlist;
+    
+  }
+  
+  
+  
+  
+  //********************************************************************************
+  // Listener for both buttons.
+  //********************************************************************************
+  
+  private class ButtonListener implements ActionListener {
+    
+    //counter to tell when we are at the end of questioning
+    int count = 0;
+    //song string, which is obtained depending on which button is clicked
+    String song = "";
+    
+    //---------------------------------------------------------------------------------
+    // Determines which button was pressed and sets text/takes action accordingly.
+    //---------------------------------------------------------------------------------  
+    public void actionPerformed (ActionEvent event){
+      
+      // if the user presses the quit button
+      if (event.getSource()==quit){
+       System.exit(0); 
+      }
+      
+      if (event.getSource()==left){ //if the left button was pressed 
+        if (count < 2){ 
+          current = current.getLeft(); 
+          askNextQuestion();
+          
+        } else{ // if count >= 2, aka we are at the end of our line of questioning
+          song = current.getLeft().getRootElement().getSong();
+          returnSong();
+          
+        }
+        
+      } else if (event.getSource()==right){  // if the right button was pressed
+        if (count < 2){
+          current = current.getRight();
+          askNextQuestion();
+          
+        } else { // if count  >= 2, aka we are at the end of our line of questioning
+          song = current.getRight().getRootElement().getSong();
+          returnSong();
+          
+        } 
+        
+      } else if (event.getSource()==now) { // if source is "give me song now" button 
+        song = current.levelorder().next().getSong(); //root of current tree
+        returnSong();
+        
+        
+      }else{ //if restart button is pressed
+        startOver();
+      }
+    }
+    
+    
+    //---------------------------------------------------------------------------------
+    // Brings up the next two mood options and their correspoinding pictures
+    //---------------------------------------------------------------------------------
+    public void askNextQuestion(){
+      // remove the old photos to prepare for the new photos
+      photo.remove(photoLeft);
+      photo.remove(photoRight);
+      
+      // assign new text for the buttons
+      left.setText(current.getLeft().getRootElement().getMood());
+      right.setText(current.getRight().getRootElement().getMood());
+      
+      // prepare the new photos
+      photoLeft = new JLabel(current.getLeft().getRootElement().getImage());
+      photoRight = new JLabel(current.getRight().getRootElement().getImage());
+      
+      // add the new photos
+      photo.add(photoLeft, BorderLayout.WEST); 
+      photo.add(photoRight, BorderLayout.CENTER);
+      
+      //increment counter
+      count++; 
+    }
+    
+    //---------------------------------------------------------------------------------
+    // Gives you a song suggestion and saves it in a list
+    //---------------------------------------------------------------------------------
+    public void returnSong(){
+      
+      //clear the slate
+      photo.remove(photoLeft);
+      photo.remove(photoRight);
+      remove(photo);
+      remove(buttons);
+      //song suggestion: 
+      mood.setText("We recommend that you listen to: \n" + song);
+      features.remove(now); //removing "give me song" button
+      features.add(restart); //restart button
+      
+      
+      //saving song to LinkedList playlist
+      playlist.add(song); 
+    }
+    
+    //---------------------------------------------------------------------------------
+    // Restarts the program
+    //---------------------------------------------------------------------------------
+    public void startOver(){
+      
+      current = program.getLib(); //resetting current
+      count = 0; //resetting count
+      mood.setText("What are you in the mood for?"); //resetting the question
+      features.remove(restart); //removing the restart button to make way for the now button
+      remove(features); // temporarily removing it so we can add it back at the end
+      
+      //resetting the pictures
+      photoLeft = new JLabel ("", leftImage, JLabel.CENTER);
+      photoRight = new JLabel ("", rightImage, JLabel.CENTER);
+      photo.add(photoLeft, BorderLayout.WEST); 
+      photo.add(photoRight, BorderLayout.CENTER);
+      // reset left and right buttons
+      left.setText(current.getLeft().getRootElement().getMood());
+      right.setText(current.getRight().getRootElement().getMood());
+      // add them after they've been reset
+      buttons.add(left);
+      buttons.add(right);
+      // restore everything else
+      features.add(now);
+      //sub-panels added in the correct order
+      add(photo);
+      add(buttons);
+      add(features);   
+      
+    }
+  }
+  
+  
+  
+  
+  
+}
